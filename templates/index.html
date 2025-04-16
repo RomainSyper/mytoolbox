@@ -1,0 +1,43 @@
+{% extends "layout.html" %}
+
+{% block title %}
+    Home
+{% endblock %}
+
+{% block main %}
+    <!-- Hero Section -->
+    <div class="hero-section">
+        <h1>Welcome to <strong>My Toolbox</strong></h1>
+        <p>Your all-in-one solution for generating QR codes, PDFs, and saving everything in your user panel.</p>
+    </div>
+    
+    <!-- Features Section -->
+    <div class="container mt-5">
+        <div class="row">
+            <div class="col-md-4 feature">
+                <div class="card">
+                    <div class="card-title">QR Code Generator</div>
+                    <div class="card-body">
+                        <p>Create custom QR codes instantly for your links and content.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 feature">
+                <div class="card">
+                    <div class="card-title">PDF Generator</div>
+                    <div class="card-body">
+                        <p>Generate high-quality PDFs from your data and download them with ease.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 feature">
+                <div class="card">
+                    <div class="card-title">User Panel</div>
+                    <div class="card-body">
+                        <p>Access all your saved creations in one place—your personal history.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
