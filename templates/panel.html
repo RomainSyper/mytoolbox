@@ -1,0 +1,225 @@
+{% extends "layout.html" %}
+
+{% block title %}
+    Panel
+{% endblock %}
+
+{% block main %}
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+{% if messages %}
+    <div class="alert alert-{{ messages[0][0] }} mt-4 alert-dismissible fade show">
+        {{ messages[0][1] }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+{% endif %}
+{% endwith %}
+
+<div class="container mt-5">
+    <!-- QR Codes Section -->
+    <div class="card">
+        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center"
+             data-bs-toggle="collapse" data-bs-target="#qrcodeTable" style="cursor: pointer;">
+            <h4 class="mb-0">Your QR Codes</h4>
+            <i class="bi bi-chevron-down toggle-icon" id="chevronIcon"></i>
+        </div>
+
+        <div id="qrcodeTable" class="collapse show">
+            <div class="card-body">
+                <table class="table table-bordered table-hover text-center align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>QR Code</th>
+                            <th>Name</th>
+                            <th>Link</th>
+                            <th>Expiration Date</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for qrcode in qrcodes %}
+                        <tr>
+                            <td>
+                                <img src="{{ url_for('static', filename='qrcodes/' + qrcode.value + '.png') }}" alt="QR Code" style="max-width: 50px;">
+                            </td>
+                            <td>{{ qrcode.value.replace('.png', '') }}</td>
+                            <td><a href="{{ qrcode.link }}" target="_blank">{{ qrcode.link }}</a></td>
+                            <td>{{ qrcode.expiration_date | date_only }}</td>
+                            <td>
+                                <!-- Preview -->
+                                <button class="btn btn-info btn-sm" data-bs-toggle="modal" data-bs-target="#qrModal{{ qrcode.id }}">
+                                    <i class="bi bi-eye"></i>
+                                </button>
+
+                                <!-- Download -->
+                                <a href="{{ url_for('download_qrcode', qrcode_id=qrcode.id) }}" class="btn btn-success btn-sm">
+                                    <i class="bi bi-download"></i>
+                                </a>
+
+                                <!-- Delete -->
+                                <form method="POST" action="{{ url_for('delete_qrcode', qrcode_id=qrcode.id) }}" method="POST" style="display:inline-block;">
+                                    <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Are you sure you want to delete this QR Code?')">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+
+                        <!-- Modal Preview with the help of ChatGPT -->
+                        <div class="modal fade" id="qrModal{{ qrcode.id }}" tabindex="-1" aria-labelledby="qrModalLabel{{ qrcode.id }}" aria-hidden="true">
+                            <div class="modal-dialog modal-dialog-centered">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title" id="qrModalLabel{{ qrcode.id }}">QR Code Preview</h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                    </div>
+                                    <div class="modal-body text-center">
+                                        <img src="{{ url_for('static', filename='qrcodes/' + qrcode.value + '.png') }}" alt="QR Code" class="img-fluid" style="max-width: 300px;">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% else %}
+                        <tr>
+                            <td colspan="5">No QR Code available</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- PDFs Section -->
+    <div class="card mt-4">
+        <div class="card-header bg-secondary text-white d-flex justify-content-between align-items-center"
+             data-bs-toggle="collapse" data-bs-target="#pdfTable" style="cursor: pointer;">
+            <h4 class="mb-0">Your PDFs</h4>
+            <i class="bi bi-chevron-down toggle-icon" id="chevronIconPDF"></i>
+        </div>
+
+        <div id="pdfTable" class="collapse show">
+            <div class="card-body">
+                <table class="table table-bordered table-hover text-center align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>PDF Name</th>
+                            <th>Expiration Date</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for pdf in pdfs %}
+                        <tr>
+                            <td>{{ pdf.name }}</td>
+                            <td>{{ pdf.expiration_date | date_only }}</td>
+                            <td>
+                                <!-- Previuew -->
+                                <a href="{{ url_for('shared_pdf', filename=pdf.filename) }}" target="_blank" class="btn btn-info btn-sm">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+
+                                <!-- Download -->
+                                <a href="{{ url_for('download_pdf', filename=pdf.filename) }}" class="btn btn-success btn-sm">
+                                    <i class="bi bi-download"></i>
+                                </a>
+
+                                <!-- Delete -->
+                                <form method="POST" action="{{ url_for('delete_pdf', filename=pdf.filename) }}" style="display:inline-block;">
+                                    <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Are you sure you want to delete this PDF?')">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </form>
+
+                                <!-- Generate QR Code -->
+                                <button
+                                    class="btn btn-outline-primary btn-sm"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#qrModal"
+                                    data-filename="{{ pdf.filename }}"
+                                    data-name="{{ pdf.name }}"
+                                    data-pdfid="{{ pdf.id }}">
+                                    <i class="bi bi-qr-code"></i>
+                                </button>
+
+                                <!-- Show the button to view the link & password if the QR code exists -->
+                                {% if qr_info[pdf.id] %}
+                                    <button class="btn btn-info btn-sm" data-bs-toggle="collapse" data-bs-target="#qrDetails{{ pdf.id }}">
+                                        <i class="bi bi-eye"></i> View Link & Password
+                                    </button>
+                                    <div id="qrDetails{{ pdf.id }}" class="collapse mt-2">
+                                        <p><strong>Link:</strong> <a href="{{ qr_info[pdf.id].link }}" target="_blank">{{ qr_info[pdf.id].link }}</a></p>
+                                        {% if qr_info[pdf.id].password %}
+                                            <p><strong>Password:</strong> {{ qr_info[pdf.id].password }}</p>
+                                        {% endif %}
+                                    </div>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="4">No PDF available</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- QR Code Modal with the help of ChatGPT -->
+<div class="modal fade" id="qrModal" tabindex="-1" aria-labelledby="qrModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <form method="POST" action="{{ url_for('create_qrcode_for_pdf') }}">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Generate a QR Code for this PDF</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body">
+            <input type="hidden" name="pdf_id" id="modal-pdf-id">
+            <div class="mb-3">
+              <label for="qrcode-name" class="form-label">QR Code's name</label>
+              <input type="text" class="form-control" name="qrcode_name" required>
+            </div>
+            <div class="mb-3">
+              <label for="expiration" class="form-label">Expiration date (Max 30 days)</label>
+              <input type="date" class="form-control" name="expiration" required>
+            </div>
+            <div class="mb-3">
+              <label for="link" class="form-label">Link to the PDF</label>
+              <input type="text" class="form-control" id="pdf-link" disabled>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" value="1" name="password_protect" id="password_protect">
+              <label class="form-check-label" for="password_protect">
+                Protect with password
+              </label>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="submit" class="btn btn-primary">Generate</button>
+          </div>
+        </div>
+      </form>
+    </div>
+</div>
+
+<!-- Script generate by ChatGPT -->
+<script>
+    const qrModal = document.getElementById('qrModal');
+    qrModal.addEventListener('show.bs.modal', event => {
+      const button = event.relatedTarget;
+      const filename = button.getAttribute('data-filename');
+      const pdfId = button.getAttribute('data-pdfid');
+
+      const linkInput = qrModal.querySelector('#pdf-link');
+      const idInput = qrModal.querySelector('#modal-pdf-id');
+
+      idInput.value = pdfId;
+      linkInput.value = `${window.location.origin}/shared/${filename}`;
+    });
+</script>
+
+{% endblock %}

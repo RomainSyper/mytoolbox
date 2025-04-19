@@ -5,21 +5,53 @@
 {% endblock %}
 
 {% block main %}
+
     <div class="container mt-5">
         <h2 class="text-center mb-4">SIGN UP</h2>
         <form method="POST" action="/register">
-            <div class="form-floating mb-3">
-                <input type="text" class="form-control" id="username" name="username" placeholder="Username" required>
+            <!-- Username validation -->
+            <div class="form-floating mb-3 {% if username_valid is not none %}{{ 'has-success' if username_valid else 'has-danger' }}{% endif %}">
+                <input type="text" class="form-control {% if username_valid is not none %}{{ 'is-valid' if username_valid else 'is-invalid' }}{% endif %}"
+                       id="username" name="username" placeholder="Username" value="{{ username }}" required>
                 <label for="username">Username</label>
+                {% if username_valid is not none %}
+                    {% if username_valid %}
+                        <div class="valid-feedback">Username valid</div>
+                    {% else %}
+                        <div class="invalid-feedback">Username already taken</div>
+                    {% endif %}
+                {% endif %}
             </div>
-            <div class="form-floating mb-3">
-                <input type="password" class="form-control" id="password" name="password" placeholder="Password" required>
+
+            <!-- Password validation -->
+            <div class="form-floating mb-3 {% if password_valid is not none %}{{ 'has-success' if password_valid else 'has-danger' }}{% endif %}">
+                <input type="password" class="form-control {% if password_valid is not none %}{{ 'is-valid' if password_valid else 'is-invalid' }}{% endif %}"
+                       id="password" name="password" placeholder="Password" required>
                 <label for="password">Password</label>
+                {% if password_valid is not none %}
+                    {% if password_valid %}
+                        <div class="valid-feedback">Password valid</div>
+                    {% else %}
+                        <div class="invalid-feedback">Password is required</div>
+                    {% endif %}
+                {% endif %}
             </div>
-            <div class="form-floating mb-3">
-                <input type="password" class="form-control" id="confirmation" name="confirmation" placeholder="Confirm Password" required>
+
+            <!-- Confirm Password validation -->
+            <div class="form-floating mb-3 {% if confirmation_valid is not none %}{{ 'has-success' if confirmation_valid else 'has-danger' }}{% endif %}">
+                <input type="password" class="form-control {% if confirmation_valid is not none %}{{ 'is-valid' if confirmation_valid else 'is-invalid' }}{% endif %}"
+                       id="confirmation" name="confirmation" placeholder="Confirm Password" required>
                 <label for="confirmation">Confirm Password</label>
+                {% if confirmation_valid is not none %}
+                    {% if confirmation_valid %}
+                        <div class="valid-feedback">Passwords match</div>
+                    {% else %}
+                        <div class="invalid-feedback">Passwords do not match</div>
+                    {% endif %}
+                {% endif %}
             </div>
+
+            <!-- Register button -->
             <div class="text-center">
                 <button type="submit" class="btn btn-primary">Register</button>
             </div>

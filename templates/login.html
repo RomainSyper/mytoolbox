@@ -7,7 +7,17 @@
 {% block main %}
     <div class="container mt-5">
         <h2 class="text-center mb-4">SIGN IN</h2>
-        <form method="POST" action="/register">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                <div class="alert alert-dismissible alert-{{ 'danger' if category == 'error' else category }}">
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    <strong>{{ message }}</strong>
+                </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        <form method="POST" action="/login">
             <div class="form-floating mb-3">
                 <input type="text" class="form-control" id="username" name="username" placeholder="Username" required>
                 <label for="username">Username</label>
@@ -17,7 +27,7 @@
                 <label for="password">Password</label>
             </div>
             <div class="text-center">
-                <button type="submit" class="btn btn-primary">Register</button>
+                <button type="submit" class="btn btn-primary">Sign In</button>
             </div>
         </form>
     </div>

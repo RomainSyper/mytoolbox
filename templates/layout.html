@@ -6,29 +6,12 @@
     <title>My Toolbox - {% block title %}{% endblock %}</title>
     <!-- Link to Cyborg theme -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootswatch@5.3.5/dist/cyborg/bootstrap.min.css">
-
-    <style>
-        .card-title {
-            background-color: #007bff; /* Blue background for title */
-            color: #fff; /* White text */
-            padding: 10px;
-            border-radius: 5px 5px 0 0; /* Rounded corners for the top */
-            text-align: center;
-        }
-        .card {
-            border: 1px solid #444; /* Subtle border for cards */
-            border-radius: 5px; /* Rounded corners for the whole card */
-            background-color: #222; /* Slightly lighter card background */
-        }
-        .card-body {
-            padding: 20px;
-            text-align: center;
-        }
-        .form-floating {
-            max-width: 400px; /* Limit the width of the input fields */
-            margin: 0 auto; /* Center the form fields horizontally */
-        }
-    </style>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <!-- Bootstrap Icon -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css" rel="stylesheet">
+    <!-- CDN Quill, I didn't know it and ChatGPT make me discover-->
+    <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+    <script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
 </head>
 <body>
 
@@ -42,27 +25,27 @@
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav ms-auto">
                 {% if session["user_id"] %}
-                    <li class="nav-item">
-                        <a class="nav-link" href="/">Home</a>
+                    <li class="nav-item ">
+                        <a class="nav-link {% if request.path == '/' %}active{% endif %}" href="/">Home</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="/qrcode">Generate QR Code</a>
+                        <a class="nav-link {% if request.path == '/qrcode' %}active{% endif %}" href="/qrcode">Generate QR Code</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="/pdf">Generate PDF</a>
+                        <a class="nav-link {% if request.path == '/pdf' %}active{% endif %}" href="/pdf">Generate PDF</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="/history">History</a>
+                        <a class="nav-link {% if request.path == '/panel' %}active{% endif %}" href="/panel">Panel</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="/logout">Logout</a>
+                        <a class="nav-link {% if request.path == '/logout' %}active{% endif %}" href="/logout">Logout</a>
                     </li>
                 {% else %}
                     <li class="nav-item">
-                        <a class="nav-link" href="/register">Register</a>
+                        <a class="nav-link {% if request.path == '/register' %}active{% endif %}" href="/register">Register</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="/login">Login</a>
+                        <a class="nav-link {% if request.path == '/login' %}active{% endif %}" href="/login">Login</a>
                     </li>
                 {% endif %}
                 </ul>
