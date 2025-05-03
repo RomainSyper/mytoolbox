@@ -1,57 +1,53 @@
 import os
 from flask import redirect, render_template, session
 from functools import wraps
-from cs50 import SQL
 from datetime import datetime
 from fpdf import FPDF, HTMLMixin
 
-db = SQL("sqlite:///toolbox.db")
+from models import db, User, QRCode, PDF
 
-# From finance (CS50 pset problem)
+
+# Vérification de connexion de l'utilisateur
 def login_required(f):
-
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if session.get("user_id") is None:
             return redirect("/login")
         return f(*args, **kwargs)
-
     return decorated_function
 
-# Deleting the expired qrcodes and pdf
+# Suppression des QR codes et PDFs expirés
 def cleanup(user_id):
     today = datetime.now()
 
-    expired_qrcodes = db.execute("SELECT id, value, expiration_date FROM qrcodes WHERE user_id = ? AND expiration_date < ?", user_id, today)
-    expired_pdfs = db.execute("SELECT id, filename, expiration_date FROM pdfs WHERE user_id = ? AND expiration_date < ?", user_id, today)
-
+    # QR Codes expirés
+    expired_qrcodes = QRCode.query.filter(QRCode.user_id == user_id, QRCode.expiration_date < today).all()
     for qrcode in expired_qrcodes:
-        filename = qrcode["value"]
-        file_path = os.path.join("static", "qrcodes", f"{filename}.png")
-
+        file_path = os.path.join("static", "qrcodes", f"{qrcode.value}.png")
         if os.path.exists(file_path):
             os.remove(file_path)
-            print(f"File not found : {file_path}")
+            print(f"Deleted file: {file_path}")
         else:
-            print(f"File not found : {file_path}")
+            print(f"File not found: {file_path}")
+        db.session.delete(qrcode)
+        print(f"Deleted QR Code with ID: {qrcode.id}")
 
-        db.execute("DELETE FROM qrcodes WHERE id = ?", qrcode["id"])
-        print(f"Row delete for ID : {qrcode['id']}")
-
+    # PDFs expirés
+    expired_pdfs = PDF.query.filter(PDF.user_id == user_id, PDF.expiration_date < today).all()
     for pdf in expired_pdfs:
-        filename = pdf["filename"]
-        file_path = os.path.join("private_pdfs", filename)
-
+        file_path = os.path.join("private_pdfs", pdf.filename)
         if os.path.exists(file_path):
             os.remove(file_path)
-            print(f"File not found : {file_path}")
+            print(f"Deleted file: {file_path}")
         else:
-            print(f"File not found : {file_path}")
+            print(f"File not found: {file_path}")
+        db.session.delete(pdf)
+        print(f"Deleted PDF with ID: {pdf.id}")
 
-        db.execute("DELETE FROM pdfs WHERE id = ?", pdf["id"])
-        print(f"Row delete for ID : {pdf["id"]}")
+    # Commit des modifications
+    db.session.commit()
 
-# Deleting the h-m-s to display only the date
+# Supprimer les heures/minutes/secondes pour n'afficher que la date
 def date_only(value):
     if isinstance(value, datetime):
         return value.strftime('%Y-%m-%d')
@@ -60,5 +56,6 @@ def date_only(value):
     except Exception:
         return value
 
+# Classe pour la génération de PDF
 class MyPDF(FPDF, HTMLMixin):
     pass
