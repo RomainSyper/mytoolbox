@@ -7,6 +7,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 from datetime import datetime, timedelta
 from flask_sqlalchemy import SQLAlchemy
+from flask_migrate import Migrate
 
 from helpers import login_required, cleanup, date_only, MyPDF
 from models import db, User, QRCode, PDF
@@ -24,6 +25,8 @@ Session(app)
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///toolbox.db"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
+# Migration
+migrate = Migrate(app, db)
 
 # Create database (run only once)
 db.init_app(app)
@@ -177,7 +180,7 @@ def delete_qrcode(qrcode_id):
     if not qrcode:
         flash("QR Code not found or you do not have permission to delete it", "error")
         return redirect(url_for("panel"))
-    file_path = os.path.join("static", "qrcodes", f"{qrcode.value}.png")
+    file_path = os.path.join("static", "qrcodes", f"{qrcode.filename}")
     if os.path.exists(file_path):
         os.remove(file_path)
     db.session.delete(qrcode)
@@ -273,12 +276,10 @@ def create_qrcode_for_pdf():
         flash("PDF not found", "error")
         return redirect(url_for("panel"))
 
-    # Génération du token sécurisé
-    token = secrets.token_urlsafe(12)
     link = url_for("shared_pdf", filename=pdf.filename, _external=True)
 
     if password_required:
-        password = token
+        password = secrets.token_urlsafe(12)
     else:
         password = None
 
@@ -286,33 +287,42 @@ def create_qrcode_for_pdf():
     img = qrcode.make(link)
     safe_name = secure_filename(name)
     user_id = session["user_id"]
-    filename = f"{user_id}_{safe_name}.png"
+    filename = f"{session['user_id']}_{safe_name}.png"
     path = os.path.join("static", "qrcodes", filename)
     os.makedirs(os.path.dirname(path), exist_ok=True)
     img.save(path)
 
     # Sauvegarde dans la base de données
     qr_code = QRCode(
-        user_id=user_id,
-        value=name,
+        user_id=user_id, 
+        value=safe_name,  # Nom complet du QR Code
+        filename=filename,  # Nom du fichier généré
         expiration_date=expiration_date,
         link=link,
         pdf_id=pdf.id,
-        token=token,
         password=password
     )
     db.session.add(qr_code)
     db.session.commit()
 
-    flash("QR Code successfully generated with token!", "success")
+    flash("QR Code successfully generated !", "success")
     return redirect(url_for("panel"))
 
 @app.route("/panel")
 @login_required
 def panel():
+    # Récupérer les QR codes et les PDFs pour l'utilisateur
     qrcodes = QRCode.query.filter_by(user_id=session["user_id"]).all()
     pdfs = PDF.query.filter_by(user_id=session["user_id"]).all()
-    return render_template("panel.html", qrcodes=qrcodes, pdfs=pdfs)
+
+    # Créer le dictionnaire `qr_info` avec l'ID des PDFs comme clés
+    qr_info = {}
+    for qr in qrcodes:
+        qr_info[qr.pdf_id] = {"link": qr.link, "password": qr.password}
+
+    # Passer `qr_info` dans le contexte du template
+    return render_template("panel.html", qrcodes=qrcodes, pdfs=pdfs, qr_info=qr_info)
+
 
 @app.route("/shared/<filename>", methods=["GET", "POST"])
 def shared_pdf(filename):

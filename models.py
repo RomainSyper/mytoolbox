@@ -18,7 +18,7 @@ class QRCode(db.Model):
     expiration_date = db.Column(db.DateTime, nullable=False)
     link = db.Column(db.String(500), nullable=False)
     pdf_id = db.Column(db.Integer, db.ForeignKey('pdfs.id'), nullable=True)
-    token = db.Column(db.String(50), nullable=True)
+    password = db.Column(db.String(100), nullable=True)
 
 class PDF(db.Model):
     __tablename__ = "pdfs"

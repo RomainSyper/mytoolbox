@@ -2,7 +2,8 @@ import os
 from flask import redirect, render_template, session
 from functools import wraps
 from datetime import datetime
-from fpdf import FPDF, HTMLMixin
+from fpdf import FPDF
+from html import unescape
 
 from models import db, User, QRCode, PDF
 
@@ -57,5 +58,11 @@ def date_only(value):
         return value
 
 # Classe pour la génération de PDF
-class MyPDF(FPDF, HTMLMixin):
-    pass
+class MyPDF(FPDF):
+    def __init__(self):
+        super().__init__()
+
+    def write_html(self, content):
+        # Implémentation simple d'un rendu HTML (ceci est un exemple simplifié)
+        content = content.replace("<b>", "").replace("</b>", "")  # Exemple basique de suppression des balises HTML
+        self.multi_cell(0, 10, content)
