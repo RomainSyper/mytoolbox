@@ -1,1 +1,26 @@
-.env
+# Python
+*.pyc
+*.pyo
+*.pyd
+__pycache__/
+
+# Flask specific
+instance/
+*.db
+*.sqlite
+*.log
+*.pot
+
+# Flask session data
+Flask_session/
+
+# PyCharm, VS Code and other IDEs
+.idea/
+.vscode/
+
+# Virtual environment
+venv/
+env/
+
+# Migration
+migrations/
