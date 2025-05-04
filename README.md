@@ -76,7 +76,7 @@ When a user who is not logged in (here called *guest*) wishes to open a document
 - werkzeug.utils
 
 #### Database
-- cs50.SQL
+- SQLAlchemy
 
 #### PDF & QR Code
 - fpdf / HTMLMixin
