@@ -10,6 +10,7 @@ instance/
 *.sqlite
 *.log
 *.pot
+flask_logs.txt
 
 # Flask session data
 Flask_session/
@@ -24,3 +25,9 @@ env/
 
 # Migration
 migrations/
+
+# Private PDFS
+private_pdfs/
+
+# QRCodes
+static/qrcodes
