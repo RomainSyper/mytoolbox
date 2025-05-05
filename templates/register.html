@@ -51,10 +51,14 @@
                 {% endif %}
             </div>
 
+            <div class="form-floating mb-3 g-recaptcha" data-sitekey="{{ site_key }}"></div>
+
             <!-- Register button -->
             <div class="text-center">
                 <button type="submit" class="btn btn-primary">Register</button>
             </div>
         </form>
     </div>
+
+    <script src="https://www.google.com/recaptcha/api.js" async defer></script>
 {% endblock %}
