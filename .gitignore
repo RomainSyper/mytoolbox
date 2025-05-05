@@ -22,6 +22,7 @@ Flask_session/
 # Virtual environment
 venv/
 env/
+.env
 
 # Migration
 migrations/

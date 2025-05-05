@@ -2,6 +2,7 @@ import os
 import qrcode
 import secrets
 import html
+import requests
 from flask import Flask, render_template, request, redirect, session, url_for, flash, send_file
 from flask_session import Session
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -9,6 +10,7 @@ from werkzeug.utils import secure_filename
 from datetime import datetime, timedelta
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
+from dotenv import load_dotenv
 
 from helpers import login_required, cleanup, date_only, MyPDF
 from models import db, User, QRCode, PDF
@@ -17,6 +19,13 @@ app = Flask(__name__)
 
 app.add_template_filter(date_only, 'date_only')
 
+# Load .env
+load_dotenv()
+
+app.config["SECRET_KEY"] = os.getenv("SECRET_KEY")
+RECAPTCHA_SITE_KEY = os.getenv("RECAPTCHA_SITE_KEY")
+RECAPTCHA_SECRET_KEY = os.getenv("RECAPTCHA_SECRET_KEY")
+
 # Flask session configuration
 app.config["SESSION_PERMANENT"] = False
 app.config["SESSION_TYPE"] = "filesystem"
@@ -24,14 +33,13 @@ app.config["SESSION_TYPE"] = "filesystem"
 Session(app)
 
 # SQLAlchemy configuration
-app.config["SQLALCHEMY_DATABASE_URI"] = "[REDACTED]"
+app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv("DATABASE_URL")
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 db.init_app(app)
 
 # Migration
 migrate = Migrate(app, db)
-
 
 @app.route("/")
 def index():
@@ -56,6 +64,27 @@ def register():
         password = request.form.get("password")
         confirmation = request.form.get("confirmation")
 
+        # Vérification reCAPTCHA
+        recaptcha_response = request.form.get("g-recaptcha-response")
+        recaptcha_req = requests.post(
+            "https://www.google.com/recaptcha/api/siteverify",
+            data={
+                "secret": RECAPTCHA_SECRET_KEY,
+                "response": recaptcha_response
+            }
+        )
+        recaptcha_result = recaptcha_req.json()
+
+        if not recaptcha_result.get("success"):
+            flash("Veuillez valider le reCAPTCHA.", "error")
+            return render_template("register.html",
+                                   username_valid=True,
+                                   password_valid=True,
+                                   confirmation_valid=True,
+                                   username=username,
+                                   site_key=RECAPTCHA_SITE_KEY)
+
+        # Validation
         username_valid = bool(username)
         password_valid = bool(password and len(password) >= 6)
         confirmation_valid = password == confirmation
@@ -65,7 +94,8 @@ def register():
                                    username_valid=username_valid,
                                    password_valid=password_valid,
                                    confirmation_valid=confirmation_valid,
-                                   username=username)
+                                   username=username,
+                                   site_key=RECAPTCHA_SITE_KEY)
 
         existing_user = User.query.filter_by(username=username).first()
         if existing_user:
@@ -74,7 +104,8 @@ def register():
                                    username_valid=username_valid,
                                    password_valid=password_valid,
                                    confirmation_valid=confirmation_valid,
-                                   username=username)
+                                   username=username,
+                                   site_key=RECAPTCHA_SITE_KEY)
 
         try:
             hash = generate_password_hash(password)
@@ -87,7 +118,8 @@ def register():
                                    username_valid=False,
                                    password_valid=True,
                                    confirmation_valid=True,
-                                   username=username)
+                                   username=username,
+                                   site_key=RECAPTCHA_SITE_KEY)
 
         flash("Registration successful!", "success")
         return redirect("/login")
@@ -95,24 +127,42 @@ def register():
     return render_template("register.html",
                            username_valid=username_valid,
                            password_valid=password_valid,
-                           confirmation_valid=confirmation_valid)
+                           confirmation_valid=confirmation_valid,
+                           site_key=RECAPTCHA_SITE_KEY)
 
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if session.get("user_id"):
         return redirect("/")
+
     if request.method == "POST":
         username = request.form.get("username")
         password = request.form.get("password")
+
+        # Vérification reCAPTCHA
+        recaptcha_response = request.form.get("g-recaptcha-response")
+        recaptcha_req = requests.post(
+            "https://www.google.com/recaptcha/api/siteverify",
+            data={
+                "secret": RECAPTCHA_SECRET_KEY,
+                "response": recaptcha_response
+            }
+        )
+        recaptcha_result = recaptcha_req.json()
+
+        if not recaptcha_result.get("success"):
+            flash("Veuillez valider le reCAPTCHA.", "error")
+            return render_template("login.html", site_key=RECAPTCHA_SITE_KEY)
+
         user = User.query.filter_by(username=username).first()
         if not user or not check_password_hash(user.hash, password):
             flash("Invalid username or password", "error")
-            return redirect("/login")
+            return render_template("login.html", site_key=RECAPTCHA_SITE_KEY)
         session["user_id"] = user.id
         cleanup(session["user_id"])
         return redirect("/")
-    return render_template("login.html")
+    return render_template("login.html", site_key=RECAPTCHA_SITE_KEY)
 
 @app.route("/logout")
 def logout():
@@ -123,6 +173,12 @@ def logout():
 @login_required
 def generate_qrcode():
     if request.method == "POST":
+
+        qr_count = QRCode.query.filter_by(user_id=session["user_id"]).count()
+        if qr_count >= 10:
+            flash("You have already created 10 QR Codes. You cannot create more.", "error")
+            return redirect("/panel")
+
         link = request.form.get("link")
         name = request.form.get("name")
         expiration = request.form.get("expiration")
@@ -191,6 +247,12 @@ def delete_qrcode(qrcode_id):
 @login_required
 def pdf_generator():
     if request.method == "POST":
+
+        pdf_count = PDF.query.filter_by(user_id=session["user_id"]).count()
+        if pdf_count >= 10:
+            flash("You have already created 10 PDFs. You cannot create more", "error")
+            return redirect("/panel")
+
         name = request.form.get("name")
         content = request.form.get("content")
         expiration = request.form.get("expiration")
