@@ -1,6 +1,7 @@
 import os
 import qrcode
 import secrets
+import html
 from flask import Flask, render_template, request, redirect, session, url_for, flash, send_file
 from flask_session import Session
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -19,19 +20,17 @@ app.add_template_filter(date_only, 'date_only')
 # Flask session configuration
 app.config["SESSION_PERMANENT"] = False
 app.config["SESSION_TYPE"] = "filesystem"
+
 Session(app)
 
 # SQLAlchemy configuration
-app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///toolbox.db"
+app.config["SQLALCHEMY_DATABASE_URI"] = "[REDACTED]"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+
+db.init_app(app)
 
 # Migration
 migrate = Migrate(app, db)
-
-# Create database (run only once)
-db.init_app(app)
-with app.app_context():
-    db.create_all()
 
 
 @app.route("/")
@@ -195,30 +194,47 @@ def pdf_generator():
         name = request.form.get("name")
         content = request.form.get("content")
         expiration = request.form.get("expiration")
+        
+        # Vérification des champs nécessaires
         if not name or not content:
             flash("Require a name and some content", "error")
             return render_template("pdf.html")
+
+        # Décodage du contenu HTML
+        content = html.unescape(content)
+
+        # Gestion de la date d'expiration
         today = datetime.today()
         expiration_date = datetime.strptime(expiration, "%Y-%m-%d") if expiration else today + timedelta(days=30)
         if expiration_date > today + timedelta(days=30) or expiration_date <= today:
             flash("Invalid expiration date", "error")
             return render_template("pdf.html")
+
+        # Génération du PDF avec rendu HTML
         pdf = MyPDF()
         pdf.add_page()
         pdf.set_font("Arial", size=12)
-        pdf.write_html(content)
+
+        pdf.render_html_content(content)  # <- méthode mise à jour
+
+        # Sauvegarde du PDF
         user_id = session["user_id"]
         safe_name = secure_filename(name)
         filename = f"{user_id}_{safe_name}_{datetime.now().strftime('%Y%m%d%H%M%S')}.pdf"
         path = os.path.join("private_pdfs", filename)
         os.makedirs(os.path.dirname(path), exist_ok=True)
         pdf.output(path)
+
+        # Sauvegarde dans la base de données
         new_pdf = PDF(user_id=user_id, name=name, filename=filename, expiration_date=expiration_date)
         db.session.add(new_pdf)
         db.session.commit()
+
         flash("PDF generated successfully!", "success")
         return redirect("/panel")
+    
     return render_template("pdf.html")
+
 
 @app.route("/download_pdf/<filename>", methods=["GET"])
 @login_required

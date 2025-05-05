@@ -2,8 +2,9 @@ import os
 from flask import redirect, render_template, session
 from functools import wraps
 from datetime import datetime
-from fpdf import FPDF
+from fpdf import FPDF, HTMLMixin
 from html import unescape
+from bs4 import BeautifulSoup
 
 from models import db, User, QRCode, PDF
 
@@ -57,12 +58,10 @@ def date_only(value):
     except Exception:
         return value
 
-# Classe pour la génération de PDF
-class MyPDF(FPDF):
+class MyPDF(FPDF, HTMLMixin):
     def __init__(self):
         super().__init__()
 
-    def write_html(self, content):
-        # Implémentation simple d'un rendu HTML (ceci est un exemple simplifié)
-        content = content.replace("<b>", "").replace("</b>", "")  # Exemple basique de suppression des balises HTML
-        self.multi_cell(0, 10, content)
+    def render_html_content(self, html_content):
+        # Utilise le moteur HTML de fpdf2 pour conserver le formatage
+        self.write_html(html_content)
